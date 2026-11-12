@@ -1,0 +1,6 @@
+{
+  "name": "نقشه تعاملی خوابگاه — University Graph",
+  "description": "ماژول نمایش گراف تعاملی، پایدار و فقط‌خواندنی محل اسکان دانشجویان، ساختمان، طبقه، اتاق و هم‌اتاقی‌ها در سامانه University Graph",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
