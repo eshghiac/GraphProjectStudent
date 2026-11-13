@@ -20,6 +20,7 @@ import {
   getSystemDomains,
   resetStudentSkillGraph,
   saveGraphLayout,
+  updateSkillEdge,
   updateSkillNode,
 } from './src/domain/skillGraphEngine';
 
@@ -177,7 +178,18 @@ async function startServer() {
     const studentId = requireStudentAuth(req, res);
     if (!studentId) return;
 
-    const { title, nodeType, subtitle, category, proficiencyLevel, position, notes } = req.body;
+    const {
+      title,
+      nodeType,
+      subtitle,
+      domainId,
+      category,
+      proficiencyLevel,
+      learningStatus,
+      position,
+      notes,
+      autoConnect,
+    } = req.body;
     if (!title || !nodeType) {
       res.status(400).json({
         errorCode: 'INVALID_INPUT',
@@ -191,10 +203,13 @@ async function startServer() {
         title,
         nodeType,
         subtitle,
+        domainId,
         category,
         proficiencyLevel,
+        learningStatus,
         position,
         notes,
+        autoConnect,
       });
       res.status(201).json(createdNode);
     } catch (err: any) {
@@ -235,7 +250,7 @@ async function startServer() {
     const studentId = requireStudentAuth(req, res);
     if (!studentId) return;
 
-    const { source, target, relationType, label } = req.body;
+    const { source, target, relationType, label, sourceHandle, targetHandle } = req.body;
     if (!source || !target) {
       res.status(400).json({
         errorCode: 'INVALID_INPUT',
@@ -245,10 +260,31 @@ async function startServer() {
     }
 
     try {
-      const edge = addSkillEdge(studentId, { source, target, relationType, label });
+      const edge = addSkillEdge(studentId, {
+        source,
+        target,
+        relationType,
+        label,
+        sourceHandle,
+        targetHandle,
+      });
       res.status(201).json(edge);
     } catch (err: any) {
       res.status(400).json({ errorCode: 'EDGE_CREATION_FAILED', message: err.message });
+    }
+  });
+
+  // PUT /api/v1/graph/skills/edges/:edgeId - Update edge label or relationType
+  app.put(['/api/v1/graph/skills/edges/:edgeId', '/api/graph/skills/edges/:edgeId'], (req: Request, res: Response) => {
+    const studentId = requireStudentAuth(req, res);
+    if (!studentId) return;
+
+    const { edgeId } = req.params;
+    try {
+      const updated = updateSkillEdge(studentId, edgeId, req.body);
+      res.status(200).json(updated);
+    } catch (err: any) {
+      res.status(404).json({ errorCode: 'EDGE_UPDATE_FAILED', message: err.message });
     }
   });
 

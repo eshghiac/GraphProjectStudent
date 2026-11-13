@@ -271,6 +271,8 @@ export interface SkillNodeDto {
   createdAt?: string;
 }
 
+export type SkillPortSide = 'top' | 'bottom' | 'left' | 'right';
+
 export interface SkillEdgeDto {
   id: string;
   source: string;
@@ -278,6 +280,8 @@ export interface SkillEdgeDto {
   relationType: SkillRelationType;
   label: string;
   sourceType?: SkillSourceType;
+  sourceHandle?: SkillPortSide;
+  targetHandle?: SkillPortSide;
 }
 
 export interface StudentSkillGraphResponseDto {

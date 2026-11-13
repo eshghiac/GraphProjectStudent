@@ -9,7 +9,6 @@ import {
   Info,
   Layers,
   Lock,
-  Map as MapIcon,
   Maximize2,
   RefreshCw,
   RotateCcw,
@@ -118,7 +117,6 @@ export function GraphCanvasWorkspace({
   const panX = useGraphStore((s) => s.panX);
   const panY = useGraphStore((s) => s.panY);
   const selection = useGraphStore((s) => s.selection);
-  const showMiniMap = useGraphStore((s) => s.showMiniMap);
   const simulateServerOutage = useGraphStore((s) => s.simulateServerOutage);
   const nodeOffsets = useGraphStore((s) => s.nodeOffsets);
 
@@ -128,7 +126,6 @@ export function GraphCanvasWorkspace({
   const setCamera = useGraphStore((s) => s.setCamera);
   const zoomIn = useGraphStore((s) => s.zoomIn);
   const zoomOut = useGraphStore((s) => s.zoomOut);
-  const toggleMiniMap = useGraphStore((s) => s.toggleMiniMap);
   const setSimulateServerOutage = useGraphStore((s) => s.setSimulateServerOutage);
   const setSessionDialogOpen = useGraphStore((s) => s.setSessionDialogOpen);
   const setNodeOffset = useGraphStore((s) => s.setNodeOffset);
@@ -761,20 +758,6 @@ export function GraphCanvasWorkspace({
             <div className="w-px h-4 bg-[#333333] mx-1" />
             <button
               type="button"
-              onClick={toggleMiniMap}
-              aria-label="نمایش یا مخفی کردن مینی‌مپ"
-              aria-pressed={showMiniMap}
-              title="مینی‌مپ"
-              className={`p-1.5 rounded-[6px] transition-colors ${
-                showMiniMap
-                  ? 'text-[#7f77dd] bg-[#282828]'
-                  : 'text-[#888888] hover:text-[#e0e0e0] hover:bg-[#282828]'
-              }`}
-            >
-              <MapIcon className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
               onClick={() => setIsInspectorOpen(!isInspectorOpen)}
               aria-label="پنل جزئیات موجودیت"
               title="پنل جزئیات گره/یال"
@@ -796,68 +779,6 @@ export function GraphCanvasWorkspace({
               <Download className="w-3.5 h-3.5" />
             </button>
           </div>
-
-          {/* Authentic SeeNodes MINI MAP Box (Bottom-Left) */}
-          {showMiniMap && (
-            <div
-              role="region"
-              aria-label="Mini Map"
-              className="absolute bottom-3 left-4 bg-[#1e1e1e] border border-[#333333] rounded-[10px] p-2 shadow-2xl z-20 w-36 sm:w-44 select-none"
-            >
-              <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[#2a2a2a] text-[10px] text-[#888888] font-mono">
-                <span className="font-semibold tracking-wider text-[#a0a0a0]">MINI MAP</span>
-                <span>{toPersianDigits(graph.nodes.length)} گره</span>
-              </div>
-              <svg
-                viewBox="-100 -50 1320 1000"
-                className="w-full h-24 bg-[#141414] rounded-[6px] border border-[#2a2a2a] cursor-pointer"
-                onClick={handleFitView}
-              >
-                {/* Edges in Mini Map */}
-                {graph.edges.map((edge) => {
-                  const s = graph.nodes.find((n) => n.id === edge.source);
-                  const t = graph.nodes.find((n) => n.id === edge.target);
-                  if (!s || !t) return null;
-                  const sPos = getNodePos(s);
-                  const tPos = getNodePos(t);
-                  return (
-                    <line
-                      key={edge.id}
-                      x1={sPos.x}
-                      y1={sPos.y + NODE_HEIGHT}
-                      x2={tPos.x}
-                      y2={tPos.y}
-                      stroke="#2a2a2a"
-                      strokeWidth={14}
-                    />
-                  );
-                })}
-                {/* Nodes in Mini Map */}
-                {graph.nodes.map((n) => {
-                  const nPos = getNodePos(n);
-                  const fill = n.isCurrentStudent
-                    ? '#f59e0b'
-                    : n.entityType === EntityType.Room
-                      ? '#10b981'
-                      : n.entityType === EntityType.Floor
-                        ? '#8b5cf6'
-                        : '#589bf6';
-                  return (
-                    <rect
-                      key={n.id}
-                      x={nPos.x - NODE_WIDTH / 2}
-                      y={nPos.y}
-                      width={NODE_WIDTH}
-                      height={NODE_HEIGHT}
-                      rx={10}
-                      fill={fill}
-                      fillOpacity={0.85}
-                    />
-                  );
-                })}
-              </svg>
-            </div>
-          )}
 
           {/* Floating Contextual Inspector Panel */}
           {isInspectorOpen && (

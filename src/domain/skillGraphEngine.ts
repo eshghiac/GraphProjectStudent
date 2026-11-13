@@ -5,6 +5,7 @@ import {
   SkillLearningStatus,
   SkillNodeDto,
   SkillNodeType,
+  SkillPortSide,
   SkillProficiencyLevel,
   SkillRelationType,
   SkillSourceType,
@@ -660,6 +661,7 @@ export function addSkillNode(
     learningStatus?: SkillLearningStatus;
     position?: { x: number; y: number };
     notes?: string;
+    autoConnect?: boolean;
   }
 ): SkillNodeDto {
   const state = getOrCreateStudentSkillGraph(studentId);
@@ -667,7 +669,10 @@ export function addSkillNode(
   const newNodeId = `node-custom-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
   const nodeType: SkillNodeType = nodeData.nodeType || 'skill';
-  const domain = nodeData.domainId ? SYSTEM_DOMAINS.find((d) => d.id === nodeData.domainId) : undefined;
+  const domain =
+    nodeData.domainId && nodeData.domainId !== 'none'
+      ? SYSTEM_DOMAINS.find((d) => d.id === nodeData.domainId)
+      : undefined;
 
   const proficiencyLevel: SkillProficiencyLevel =
     nodeData.proficiencyLevel ||
@@ -681,19 +686,40 @@ export function addSkillNode(
   const anchorPos = parentDomainNode?.position || { x: 560, y: 380 };
   const angle = ((state.nodes.length * 1.35) % (2 * Math.PI));
 
-  const position = nodeData.position || {
-    x: Math.round(anchorPos.x + 280 * Math.cos(angle)),
-    y: Math.round(anchorPos.y + 180 * Math.sin(angle)),
+  const hasExplicitPosition = Boolean(nodeData.position);
+  const position = nodeData.position
+    ? { x: Math.round(nodeData.position.x), y: Math.round(nodeData.position.y) }
+    : {
+        x: Math.round(anchorPos.x + 280 * Math.cos(angle)),
+        y: Math.round(anchorPos.y + 180 * Math.sin(angle)),
+      };
+
+  const defaultSubtitleByType: Record<SkillNodeType, string> = {
+    student: 'هویت دانشجو',
+    domain: 'حوزه شخصی دانشجو',
+    skill: 'مهارت شخصی خوداظهاری',
+    interest: 'علاقه‌مندی شخصی',
+    achievement: 'دستاورد شخصی دانشجو',
+    event: 'رویداد / جشنواره دانشجویی',
+  };
+
+  const defaultCategoryByType: Record<SkillNodeType, string> = {
+    student: 'هویت دانشجو',
+    domain: 'حوزه فعالیت',
+    skill: 'مهارت شخصی',
+    interest: 'علاقه‌مندی',
+    achievement: 'دستاورد',
+    event: 'رویداد',
   };
 
   const newNode: SkillNodeDto = {
     id: newNodeId,
     nodeType,
     title: nodeData.title.trim(),
-    subtitle: nodeData.subtitle?.trim() || (nodeType === 'achievement' ? 'دستاورد شخصی دانشجو' : 'مهارت شخصی خوداظهاری'),
+    subtitle: nodeData.subtitle?.trim() || defaultSubtitleByType[nodeType],
     domainId: domain?.id,
     domainTitle: domain?.title,
-    category: nodeData.category?.trim() || domain?.title || 'مهارت شخصی',
+    category: nodeData.category?.trim() || domain?.title || defaultCategoryByType[nodeType],
     sourceType: 'personal',
     verificationStatus: 'unverified',
     proficiencyLevel,
@@ -707,8 +733,8 @@ export function addSkillNode(
 
   state.nodes.push(newNode);
 
-  // Connect to domain if provided
-  if (domain) {
+  // Connect to domain if provided, or to student if autoConnect is enabled
+  if (domain && nodeType !== 'domain') {
     const domainNodeId = `node-domain-${domain.id}`;
     // Ensure domain node is on canvas
     if (!state.nodes.some((n) => n.id === domainNodeId)) {
@@ -723,22 +749,24 @@ export function addSkillNode(
       label: 'متعلق به حوزه',
       sourceType: 'personal',
     });
-  } else {
-    // If no domain, connect to student node
+  } else if (nodeData.autoConnect !== false) {
     const studentNode = state.nodes.find((n) => n.nodeType === 'student');
     if (studentNode) {
       state.edges.push({
         id: `edge-${studentNode.id}-${newNode.id}-${Date.now()}`,
         source: studentNode.id,
         target: newNode.id,
-        relationType: 'has_skill',
-        label: 'مهارت ثبت‌شده',
+        relationType: nodeType === 'domain' ? 'has_domain' : 'has_skill',
+        label: nodeType === 'domain' ? 'حوزه شخصی' : 'مهارت ثبت‌شده',
         sourceType: 'personal',
       });
     }
   }
 
-  state.nodes = resolveMagneticSpacing(state.nodes, parentDomainNode?.id || `node-student-${studentId}`, 10);
+  const pinnedId = hasExplicitPosition
+    ? newNodeId
+    : parentDomainNode?.id || `node-student-${studentId}`;
+  state.nodes = resolveMagneticSpacing(state.nodes, pinnedId, 10);
   state.updatedAt = now;
   return state.nodes.find((n) => n.id === newNodeId) || newNode;
 }
@@ -763,7 +791,11 @@ export function updateSkillNode(
   if (existing.sourceType === 'system' && updates.title && updates.title !== existing.title) {
     throw new Error('ویرایش مشخصات گره‌های رسمی دانشگاه مجاز نیست.');
   }
+  if (existing.sourceType === 'system' && updates.nodeType && updates.nodeType !== existing.nodeType) {
+    throw new Error('تغییر نوع گره‌های رسمی دانشگاه مجاز نیست.');
+  }
 
+  const nextNodeType = updates.nodeType || existing.nodeType;
   const numericLevel =
     updates.numericLevel ||
     (updates.proficiencyLevel ? PROFICIENCY_LEVEL_MAP[updates.proficiencyLevel].numeric : existing.numericLevel);
@@ -772,11 +804,35 @@ export function updateSkillNode(
     updates.proficiencyLevel ||
     (updates.numericLevel ? NUMERIC_TO_PROFICIENCY[updates.numericLevel] : existing.proficiencyLevel);
 
+  const typeLabelDefaults: Record<SkillNodeType, { subtitle: string; category: string }> = {
+    student: { subtitle: 'هویت دانشجو', category: 'هویت دانشجو' },
+    domain: { subtitle: 'حوزه شخصی دانشجو', category: 'حوزه فعالیت' },
+    skill: { subtitle: 'مهارت شخصی خوداظهاری', category: 'مهارت شخصی' },
+    interest: { subtitle: 'علاقه‌مندی شخصی', category: 'علاقه‌مندی' },
+    achievement: { subtitle: 'دستاورد شخصی دانشجو', category: 'دستاورد' },
+    event: { subtitle: 'رویداد / جشنواره دانشجویی', category: 'رویداد' },
+  };
+
+  const typeChanged = updates.nodeType && updates.nodeType !== existing.nodeType;
+
   const updatedNode: SkillNodeDto = {
     ...existing,
     ...updates,
     id: existing.id,
+    nodeType: nextNodeType,
     sourceType: existing.sourceType,
+    subtitle:
+      updates.subtitle !== undefined
+        ? updates.subtitle.trim() || typeLabelDefaults[nextNodeType].subtitle
+        : typeChanged
+          ? typeLabelDefaults[nextNodeType].subtitle
+          : existing.subtitle,
+    category:
+      updates.category !== undefined
+        ? updates.category
+        : typeChanged
+          ? typeLabelDefaults[nextNodeType].category
+          : existing.category,
     numericLevel,
     proficiencyLevel,
     position: updates.position ? { ...updates.position } : existing.position,
@@ -807,6 +863,13 @@ export function deleteSkillNode(studentId: string, nodeId: string): { success: b
   return { success: true };
 }
 
+function normalizePortSide(value: unknown): SkillPortSide | undefined {
+  if (value === 'top' || value === 'bottom' || value === 'left' || value === 'right') {
+    return value;
+  }
+  return undefined;
+}
+
 /**
  * Creates a free relationship edge between two nodes (Section 14.8).
  */
@@ -817,6 +880,8 @@ export function addSkillEdge(
     target: string;
     relationType?: SkillRelationType;
     label?: string;
+    sourceHandle?: SkillPortSide;
+    targetHandle?: SkillPortSide;
   }
 ): SkillEdgeDto {
   const state = getOrCreateStudentSkillGraph(studentId);
@@ -831,12 +896,25 @@ export function addSkillEdge(
     throw new Error('اتصال گره به خودش مجاز نیست.');
   }
 
+  const safeSourceHandle = normalizePortSide(edgeData.sourceHandle);
+  const safeTargetHandle = normalizePortSide(edgeData.targetHandle);
+
   const existingEdge = state.edges.find(
     (e) =>
       (e.source === sourceNode.id && e.target === targetNode.id) ||
       (e.source === targetNode.id && e.target === sourceNode.id)
   );
   if (existingEdge) {
+    if (safeSourceHandle || safeTargetHandle) {
+      if (existingEdge.source === sourceNode.id) {
+        existingEdge.sourceHandle = safeSourceHandle ?? existingEdge.sourceHandle;
+        existingEdge.targetHandle = safeTargetHandle ?? existingEdge.targetHandle;
+      } else {
+        existingEdge.sourceHandle = safeTargetHandle ?? existingEdge.sourceHandle;
+        existingEdge.targetHandle = safeSourceHandle ?? existingEdge.targetHandle;
+      }
+      state.updatedAt = new Date().toISOString();
+    }
     return existingEdge;
   }
 
@@ -850,11 +928,59 @@ export function addSkillEdge(
     relationType: relation,
     label,
     sourceType: 'personal',
+    ...(safeSourceHandle ? { sourceHandle: safeSourceHandle } : {}),
+    ...(safeTargetHandle ? { targetHandle: safeTargetHandle } : {}),
   };
 
   state.edges.push(newEdge);
   state.updatedAt = new Date().toISOString();
   return newEdge;
+}
+
+/**
+ * Updates an edge's label, relation type, or anchored port handles.
+ */
+export function updateSkillEdge(
+  studentId: string,
+  edgeId: string,
+  updates: {
+    label?: string;
+    relationType?: SkillRelationType;
+    sourceHandle?: SkillPortSide;
+    targetHandle?: SkillPortSide;
+  }
+): SkillEdgeDto {
+  const state = getOrCreateStudentSkillGraph(studentId);
+  const edgeIndex = state.edges.findIndex((e) => e.id === edgeId);
+  if (edgeIndex === -1) {
+    throw new Error('خط ارتباطی مورد نظر یافت نشد.');
+  }
+
+  const existing = state.edges[edgeIndex];
+  const nextRelation = updates.relationType || existing.relationType;
+  const nextLabel =
+    updates.label !== undefined
+      ? updates.label.trim() || SKILL_RELATION_LABELS[nextRelation]
+      : updates.relationType
+        ? SKILL_RELATION_LABELS[nextRelation]
+        : existing.label;
+
+  const safeSourceHandle =
+    updates.sourceHandle !== undefined ? normalizePortSide(updates.sourceHandle) : existing.sourceHandle;
+  const safeTargetHandle =
+    updates.targetHandle !== undefined ? normalizePortSide(updates.targetHandle) : existing.targetHandle;
+
+  const updatedEdge: SkillEdgeDto = {
+    ...existing,
+    relationType: nextRelation,
+    label: nextLabel,
+    ...(safeSourceHandle ? { sourceHandle: safeSourceHandle } : {}),
+    ...(safeTargetHandle ? { targetHandle: safeTargetHandle } : {}),
+  };
+
+  state.edges[edgeIndex] = updatedEdge;
+  state.updatedAt = new Date().toISOString();
+  return updatedEdge;
 }
 
 /**

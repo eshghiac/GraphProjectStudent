@@ -14,7 +14,6 @@ interface GraphWorkspaceState {
   zoom: number;
   panX: number;
   panY: number;
-  showMiniMap: boolean;
   simulateServerOutage: boolean;
   isSessionDialogOpen: boolean;
   nodeOffsets: Record<string, { x: number; y: number }>;
@@ -27,7 +26,6 @@ interface GraphWorkspaceState {
   setCamera: (camera: { zoom?: number; panX?: number; panY?: number }) => void;
   zoomIn: () => void;
   zoomOut: () => void;
-  toggleMiniMap: () => void;
   setSimulateServerOutage: (enabled: boolean) => void;
   setSessionDialogOpen: (open: boolean) => void;
   updateNodeOffset: (nodeId: string, dx: number, dy: number) => void;
@@ -45,7 +43,6 @@ export const useGraphStore = create<GraphWorkspaceState>((set) => ({
   zoom: 0.8,
   panX: 0,
   panY: 0,
-  showMiniMap: true,
   simulateServerOutage: false,
   isSessionDialogOpen: false,
   nodeOffsets: {},
@@ -92,8 +89,6 @@ export const useGraphStore = create<GraphWorkspaceState>((set) => ({
     set((state) => ({
       zoom: Math.max(MIN_ZOOM, Number((state.zoom - 0.15).toFixed(2))),
     })),
-
-  toggleMiniMap: () => set((state) => ({ showMiniMap: !state.showMiniMap })),
 
   setSimulateServerOutage: (enabled) => set({ simulateServerOutage: enabled }),
 

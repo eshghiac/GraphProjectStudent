@@ -16,6 +16,7 @@ import {
   saveGraphLayout,
   SKILL_NODE_HEIGHT,
   SKILL_NODE_WIDTH,
+  updateSkillEdge,
   updateSkillNode,
 } from './skillGraphEngine';
 
@@ -199,4 +200,95 @@ test('UX & Layout: initial stu-101 skill graph nodes have zero bounding-box over
       );
     }
   }
+});
+
+test('SeeNodes Canvas: double-click spawn preserves explicit position, personal box type switches freely, and edge label updates', () => {
+  resetStudentSkillGraph('stu-101');
+  const spawned = addSkillNode('stu-101', {
+    title: 'هوش مصنوعی مولد',
+    nodeType: 'skill',
+    position: { x: 1120, y: 640 },
+    notes: 'پروژه تحقیقاتی جدید',
+    autoConnect: false,
+  });
+
+  assert.equal(spawned.position.x, 1120);
+  assert.equal(spawned.position.y, 640);
+  assert.equal(spawned.notes, 'پروژه تحقیقاتی جدید');
+
+  // Switch personal box freely from skill to domain
+  const switched = updateSkillNode('stu-101', spawned.id, {
+    nodeType: 'domain',
+    title: 'حوزه هوش مصنوعی',
+    notes: 'تبدیل شده به حوزه شخصی',
+  });
+  assert.equal(switched.nodeType, 'domain');
+  assert.equal(switched.title, 'حوزه هوش مصنوعی');
+  assert.equal(switched.notes, 'تبدیل شده به حوزه شخصی');
+
+  // Official system nodes cannot change type
+  assert.throws(() => {
+    updateSkillNode('stu-101', 'node-domain-domain-tech', { nodeType: 'skill' });
+  }, /تغییر نوع گره‌های رسمی دانشگاه مجاز نیست/);
+
+  // Create and update an edge label
+  const edge = addSkillEdge('stu-101', {
+    source: 'node-student-stu-101',
+    target: spawned.id,
+    relationType: 'has_domain',
+    label: 'علاقه‌مند به حوزه',
+  });
+  const updatedEdge = updateSkillEdge('stu-101', edge.id, {
+    label: 'مسیر اصلی تخصصی',
+    relationType: 'related_to',
+  });
+  assert.equal(updatedEdge.label, 'مسیر اصلی تخصصی');
+  assert.equal(updatedEdge.relationType, 'related_to');
+
+  deleteSkillEdge('stu-101', edge.id);
+  deleteSkillNode('stu-101', spawned.id);
+});
+
+test('SeeNodes Canvas: edge sourceHandle and targetHandle stay anchored when boxes move', () => {
+  resetStudentSkillGraph('stu-101');
+  const boxA = addSkillNode('stu-101', {
+    title: 'باکس مبدأ',
+    nodeType: 'skill',
+    position: { x: 200, y: 300 },
+    autoConnect: false,
+  });
+  const boxB = addSkillNode('stu-101', {
+    title: 'باکس مقصد',
+    nodeType: 'skill',
+    position: { x: 600, y: 300 },
+    autoConnect: false,
+  });
+
+  const edge = addSkillEdge('stu-101', {
+    source: boxA.id,
+    target: boxB.id,
+    relationType: 'related_to',
+    label: 'اتصال ثابت',
+    sourceHandle: 'right',
+    targetHandle: 'left',
+  });
+
+  assert.equal(edge.sourceHandle, 'right');
+  assert.equal(edge.targetHandle, 'left');
+
+  // Move boxA past boxB to the right and above — handles must remain strictly 'right' -> 'left'
+  saveGraphLayout('stu-101', [
+    { nodeId: boxA.id, x: 950, y: 120 },
+    { nodeId: boxB.id, x: 180, y: 540 },
+  ]);
+
+  const graphAfterMove = getStudentSkillGraphDto('stu-101');
+  const persistedEdge = graphAfterMove.edges.find((e) => e.id === edge.id);
+  assert.ok(persistedEdge);
+  assert.equal(persistedEdge?.sourceHandle, 'right');
+  assert.equal(persistedEdge?.targetHandle, 'left');
+
+  deleteSkillEdge('stu-101', edge.id);
+  deleteSkillNode('stu-101', boxA.id);
+  deleteSkillNode('stu-101', boxB.id);
 });

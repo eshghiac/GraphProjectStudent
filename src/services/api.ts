@@ -6,6 +6,7 @@ import {
   SkillLearningStatus,
   SkillNodeDto,
   SkillNodeType,
+  SkillPortSide,
   SkillProficiencyLevel,
   SkillRelationType,
   StudentPublicDetailDto,
@@ -174,6 +175,7 @@ export async function createSkillNodeApi(
     learningStatus?: SkillLearningStatus;
     position?: { x: number; y: number };
     notes?: string;
+    autoConnect?: boolean;
   }
 ): Promise<SkillNodeDto> {
   const response = await fetch('/api/v1/graph/skills/nodes', {
@@ -221,10 +223,33 @@ export async function createSkillEdgeApi(
     target: string;
     relationType?: SkillRelationType;
     label?: string;
+    sourceHandle?: SkillPortSide;
+    targetHandle?: SkillPortSide;
   }
 ): Promise<SkillEdgeDto> {
   const response = await fetch('/api/v1/graph/skills/edges', {
     method: 'POST',
+    headers: {
+      ...buildAuthHeaders(sessionToken),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  return parseApiJson<SkillEdgeDto>(response);
+}
+
+export async function updateSkillEdgeApi(
+  sessionToken: string,
+  edgeId: string,
+  payload: {
+    label?: string;
+    relationType?: SkillRelationType;
+    sourceHandle?: SkillPortSide;
+    targetHandle?: SkillPortSide;
+  }
+): Promise<SkillEdgeDto> {
+  const response = await fetch(`/api/v1/graph/skills/edges/${encodeURIComponent(edgeId)}`, {
+    method: 'PUT',
     headers: {
       ...buildAuthHeaders(sessionToken),
       'Content-Type': 'application/json',
