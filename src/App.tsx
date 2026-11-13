@@ -4,6 +4,7 @@ import { ContractDocsView } from './components/ContractDocsView';
 import { GraphCanvasWorkspace } from './components/GraphCanvasWorkspace';
 import { SecurityPrivacyView } from './components/SecurityPrivacyView';
 import { SessionSwitcherModal } from './components/SessionSwitcherModal';
+import { SkillsGraphWorkspace } from './components/SkillsGraphWorkspace';
 import { TopNavHeader } from './components/TopNavHeader';
 import { WorkspaceTab } from './domain/types';
 import { fetchMyDormitoryGraph } from './services/api';
@@ -25,6 +26,10 @@ export default function App() {
       <TopNavHeader />
 
       <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+        {activeTab === WorkspaceTab.Skills && (
+          <SkillsGraphWorkspace sessionToken={sessionToken} />
+        )}
+
         {activeTab === WorkspaceTab.Graph && (
           <GraphCanvasWorkspace
             graph={graphQuery.data}

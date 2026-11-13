@@ -22,6 +22,7 @@ export enum AccommodationStatus {
 }
 
 export enum WorkspaceTab {
+  Skills = 'skills',
   Graph = 'graph',
   Summary = 'summary',
   Security = 'security',
@@ -200,3 +201,102 @@ export interface DbRoomAssignmentRecord {
   endDate: string;
   assignmentState: 'confirmed' | 'pending' | 'ended';
 }
+
+/* =========================================================================
+ * Version 2.0: Student Visual Skills & Talent Graph Types (SRS Aligned)
+ * ========================================================================= */
+
+export type SkillNodeType =
+  | 'student'
+  | 'domain'
+  | 'skill'
+  | 'interest'
+  | 'achievement'
+  | 'event';
+
+export type SkillSourceType = 'personal' | 'system' | 'reference';
+
+export type SkillVerificationStatus = 'unverified' | 'verified' | 'rejected';
+
+export type SkillProficiencyLevel =
+  | 'beginner'
+  | 'elementary'
+  | 'intermediate'
+  | 'advanced'
+  | 'expert';
+
+export type SkillLearningStatus =
+  | 'interested'
+  | 'learning'
+  | 'practiced'
+  | 'proficient'
+  | 'archived';
+
+export type SkillRelationType =
+  | 'has_domain'
+  | 'has_interest'
+  | 'has_skill'
+  | 'belongs_to'
+  | 'related_to'
+  | 'has_achievement'
+  | 'demonstrates'
+  | 'participated_in';
+
+export interface SystemDomainDto {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  icon: string;
+  color: string;
+  isActive: boolean;
+}
+
+export interface SkillNodeDto {
+  id: string;
+  nodeType: SkillNodeType;
+  title: string;
+  subtitle?: string;
+  domainId?: string;
+  domainTitle?: string;
+  category?: string;
+  sourceType: SkillSourceType;
+  verificationStatus?: SkillVerificationStatus;
+  proficiencyLevel?: SkillProficiencyLevel;
+  numericLevel?: number; // 1 to 5 for star rating UI
+  learningStatus?: SkillLearningStatus;
+  position: NodePosition;
+  notes?: string;
+  isCustom?: boolean;
+  createdAt?: string;
+}
+
+export interface SkillEdgeDto {
+  id: string;
+  source: string;
+  target: string;
+  relationType: SkillRelationType;
+  label: string;
+  sourceType?: SkillSourceType;
+}
+
+export interface StudentSkillGraphResponseDto {
+  graphId: string;
+  apiVersion: 'v2';
+  version: number;
+  module: 'student_skills';
+  studentId: string;
+  studentDisplayName: string;
+  major: string;
+  faculty: string;
+  entryYear: number;
+  nodes: SkillNodeDto[];
+  edges: SkillEdgeDto[];
+  meta: {
+    generatedAt: string;
+    layoutVersion: number;
+  };
+  updatedAt: string;
+}
+
+

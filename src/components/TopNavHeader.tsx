@@ -3,6 +3,7 @@ import { WorkspaceTab } from '../domain/types';
 import { useGraphStore } from '../store/useGraphStore';
 
 const NAV_ITEMS: Array<{ tab: WorkspaceTab; label: string }> = [
+  { tab: WorkspaceTab.Skills, label: 'نقشه مهارت‌ها' },
   { tab: WorkspaceTab.Graph, label: 'نقشه خوابگاه' },
   { tab: WorkspaceTab.Summary, label: 'مشخصات اسکان' },
   { tab: WorkspaceTab.Security, label: 'امنیت و دسترسی' },
@@ -24,11 +25,11 @@ export function TopNavHeader() {
         {/* Zone 1: Brand Wordmark */}
         <button
           type="button"
-          onClick={() => setActiveTab(WorkspaceTab.Graph)}
+          onClick={() => setActiveTab(WorkspaceTab.Skills)}
           className="text-xs sm:text-sm font-semibold tracking-tight text-[#e0e0e0] hover:text-white transition-colors whitespace-nowrap shrink-0 flex items-center gap-2"
         >
           <span className="w-2 h-2 rounded-full bg-[#7f77dd]" />
-          <span>گراف خوابگاه</span>
+          <span>گراف دانشگاه</span>
         </button>
 
         <div className="w-px h-4 bg-[#333333] hidden sm:block" />

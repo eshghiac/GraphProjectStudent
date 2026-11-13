@@ -40,7 +40,7 @@ export const MAX_ZOOM = 1.85;
 
 export const useGraphStore = create<GraphWorkspaceState>((set) => ({
   sessionToken: SESSION_ACCOUNTS[0].sessionToken,
-  activeTab: WorkspaceTab.Graph,
+  activeTab: WorkspaceTab.Skills,
   selection: null,
   zoom: 0.8,
   panX: 0,
